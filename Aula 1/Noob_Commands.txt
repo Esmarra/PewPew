@@ -1,0 +1,10 @@
+~==== BASH IMP COMMANDS ====~
+	Comment: #im comment#
+	Print: echo "hello world"
+	Sleep: speep 2 #sleep 2 segundos
+
+
+pwd // prints directory
+cat // prints file txt (can join 2 files)
+grep palavra file1.txt // print and highlights all "palavra" found in file
+
