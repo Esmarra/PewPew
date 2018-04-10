@@ -2,22 +2,34 @@
 # include <stdlib.h>
 # include <signal.h>
 #include <unistd.h> //Sleep
+#define RED "\x1B[31m"
+#define GREEN	"\x1B[32m"
+#define WHITE "\x1B[00m"
+
 void sigproc (int var );
+void sigqproc (int var );
+
 int main (){
   signal (SIGINT , sigproc );
-  while (1){
+  signal (SIGQUIT , sigqproc );
+  while (1){ // Loop
+    printf ("%s>I'm running\n",WHITE);
     sleep (1);
-    printf ("I'm running \n");
-  }; /* infinite loop */
+  };
+
   return 0;
 }
+
 void sigproc (int var ){
-  /*--------------------------------------
-  NOTe : some versions of UNIX will reset
-  signal to default after each call . So for
-  portability reset signal each time */
   signal (SIGINT , sigproc );
-  /*------------------------------------*/
-  printf ("You have pressed ctrl -c\n");
-  exit (0); /* normal exit status */
+  printf ("\n>You have pressed Ctrl-C\n");
+  printf ("%s>==== EXIT BLOCKED ====\n",RED);
+  //exit (0);
+}
+
+void sigqproc (int var ){
+  signal (SIGQUIT , sigqproc );
+  printf ("%s\n>You have pressed Ctrl-\\ \n",WHITE);
+  printf ("%s>==== EXIT COMPLETE ====\n",GREEN);
+  exit (0);
 }
