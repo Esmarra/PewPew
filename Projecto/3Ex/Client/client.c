@@ -1,3 +1,21 @@
+/*=========================================
+Program Name :	client.c
+Base Language:	Mixed
+Created by   :	Esmarra
+Creation Date:	14/04/2018
+Rework date entries:
+
+Program Objectives:
+  * Open .asc and .bin
+  * Read 1 from .asc Write 1 to .bin
+  * Close .asc .bind
+  * Open .bin read to float array (one pass) -> mmap() ?
+  * Send floats to server (1 by one)
+  * End by sendind FLT_MAX (checksum)
+Observations:
+  * TxT to ASCII : http://www.unit-conversion.info/texttools/ascii/
+Special Thanks:
+=========================================*/
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,13 +56,13 @@ int main(){ // client
   //==== READ .ASC FILE ====// Lê .asc para uma estrutura floats
   FILE *ficheiro1;
   ficheiro1 = fopen(read_file_name,"rt"); // Inicializa ficheiro de leitura
-  while (fscanf(ficheiro1, "%f", &data.number[data.num]) == 1){ // Le ficheir linha a linha
+  while (fscanf(ficheiro1, "%f", &data.number[data.num]) != EOF){ // Le ficheir linha a linha
     printf("ASC Num:%d | Name: %f \n", data.num,data.number[data.num]);
     data.num++; // Incrementa o numero de enventos
   }
   if (feof(ficheiro1)){ // End file
     data.num-=1; // Last is <null>
-    fclose(ficheiro1);// Close file
+    fclose(ficheiro1);// Close .asc file
   }
   //=======================//
   printf("There are %d floats stored\n",data.num); //[DEBUG]
@@ -57,8 +75,10 @@ int main(){ // client
     fp2bin(data.number[i+1], bin); // Conv float to bin
     fprintf(ficheiro2,"%s\n",bin); // Write to .bin file
   }
+  fclose(ficheiro2);// Close .bin file
   //=======================//
 
+  printf("Last nº is: %s\n",bin); //[DEBUG]
 
 
 
@@ -120,8 +140,8 @@ void fp2bin(double fp, char* binString){
  if (fp_int != 0)
    fp2bin_i(fp_int,binString);
  else
-   strcpy(binString,"0");
- strcat(binString,"."); // Radix point
+   //strcpy(binString,"0");
+ //strcat(binString,"."); // Radix point
  /* Convert fractional part, if any */
  if (fp_frac != 0)
    fp2bin_f(fp_frac,binString+strlen(binString)); //Append
