@@ -42,9 +42,11 @@ char bin[MANTISSA];
 
 struct Data{
   float number[MAX_CAR]; // Stores in Float Array
+  //float teste;
   int data_size; // Keeps Track of Array Size
 };
 
+char aux[2];
 
 int main(){
   struct Data data[FLT_MAX]; //Start data[INDEX] struct #### DELETE ####
@@ -55,7 +57,7 @@ int main(){
   FILE *ficheiro2;
   ficheiro1 = fopen("input.asc","rt"); // Inicializa ficheiro de leitura
   ficheiro2 = fopen("input.bin","w");
-  char temp[100];
+  char temp[100]; //mmap issue \!\
   char tee[MAX_CAR]={0};
   while (fgets(temp,MAX_CAR,ficheiro1) != NULL){ // Le ficheiro linha a linha
     //printf("\nRaw: %s",temp); // |DEBUG| read Raw value from file
@@ -68,7 +70,7 @@ int main(){
         // ==== Write to Bin ==== //
         fp2bin(atof(tee), bin); // Conv float to bin
         fprintf(ficheiro2,"%s",bin); // Write to .bin file (APPEND IN SEQ = NO SPACES ??)
-        data[line].number[space_count]=atof(tee); // Store in float value #### REMOVE #####
+        //data[line].number[space_count]=atof(tee); // Store in float value #### REMOVE #####
         //printf("Tee: %s\n",tee ); // |DEBUG| shows tee string value
         tee[0]='\0'; // Wipe tee string
         j=0; //Reset ASCII value tracker
@@ -86,52 +88,52 @@ int main(){
         j++;
       }
     }
-    data[line].data_size=space_count;
-    printf("There are %d numbers in line %d\n",data[line].data_size,line);
+    //data[line].data_size=space_count;
+    //printf("There are %d numbers in line %d\n",data[line].data_size,line);
 
-
+    /*
     for(i=0;i<data[line].data_size;i++){
       printf("Float %f\n",data[line].number[i]);
     }
+    */
     line++;
+
   }
   line--;// Cleanup -1
 
   fclose(ficheiro1);// Close .asc file
   fclose(ficheiro2);// Close .bin file
   printf(">Input File has %d lines\n",line );
+  temp[0]='\0'; //Reset temp
 
   //==== Open .bin ====// MMAP???
   const char *memblock;
   int fd;
+  int flt=0;
   struct stat sb;
-
   fd = open("input.bin", O_RDONLY); //input.bin
   printf("Size: %lu\n",sb.st_size);
-  memblock = mmap(NULL, sb.st_size, PROT_WRITE, MAP_PRIVATE, fd, 0);
+  memblock = mmap(NULL, sb.st_size,PROT_READ, MAP_PRIVATE, fd, 0);
   if (memblock == MAP_FAILED) perror("mmap");
   int i;
-  for(i = 0; i < sb.st_size; i++){
-    //temp[i]=memblock[i];
-    //strcat(temp,memblock[i]);
-
-    //sprintf(temp,"%c",memblock[i]);
+  for(i = 0; i < 200; i++){ // Abrir x mem blocks (MAX?)
     if(memblock[i]=='\n'){ //end strcat
-      //conv to float
-      printf("he dead\n" );
-
+      data[flt].number[0]=atof(temp);
+      printf("Bin Flt: %f \n",data[flt].number[0]);
+      temp[0]='\0'; //Reset temp
+      //printf("endl\n" );
+      flt++;
     }
     else{
-      printf("%c",memblock[i]);
-      //add str
+      if(memblock[i]=='\0'){
+        printf("dead\n" );
+        break;
+      }
+      sprintf(aux,"%c",memblock[i]); // copy memblock to aux
+      strcat(temp,aux); // clip aux to temp
     }
-
-     //printf("[%lu]=%X ", i, memblock[i]);
-
    }
-   printf("post: %s",temp);
-   printf("\n");
-
+   //==================//
 
   /*
   ficheiro1 = fopen("input.bin","rt");

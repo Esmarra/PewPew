@@ -30,6 +30,7 @@ Special Thanks:
 #include <sys/un.h>
 //========================//
 #define FLT_MAX 20 // Max Lines in ASC File
+#define MAX_CAR 30 // File Max Characters per Line
 #define MANTISSA 23
 
 char read_file_name[]="sauce/input.asc";   // Read asc file located at /sauce/
@@ -77,25 +78,55 @@ int main(){ // client
   }
   fclose(ficheiro2);// Close .bin file
   //=======================//
-
   printf("Last nº is: %s\n",bin); //[DEBUG]
-
-
-
 
   //==== Start UNIX Connection ====//
   sock= socket(AF_UNIX, SOCK_STREAM, 0);
   if (sock < 0) perror("Creating Socket");
 
 	server.sun_family = AF_UNIX; // Address
+  strncpy(server.sun_path, "/tmp/socket", sizeof(server.sun_path)-1);
 
   // Connect to Server
   if(connect(sock, (struct sockaddr *) &server, SUN_LEN(&server)) < 0){
-      perror("Connecting to Server\n");
-      return 0;
+      perror("Connecting to Server");
+      exit(0);
   }
-  // Send data to server_ip
 
+  //char info[MAX_CAR]; // f=FLT_MAX e=exit
+  float info;
+  do{
+    // Increment Send
+    for(i=0;i<data.num;i++){
+      //sprintf(info,"%f",data.number[i+1]);
+      info=data.number[i+1];
+      printf("sent %f\n",info);
+      if(send(sock,&info,sizeof(info),0)<0){// Send Data to Server
+        perror("Sending Data");
+        exit(0);
+      }
+    }
+
+    info=-2;
+    printf("sent %f\n",info);
+    if(send(sock,&info,sizeof(info),0)<0){// Send Data to Server
+      perror("Sending Data");
+      exit(0);
+    }
+    info=data.num;
+    printf("FLT=%f\n",info);
+    if(send(sock,&info,sizeof(info),0)<0){// Send Data to Server
+      perror("Sending Data");
+      exit(0);
+    }
+
+    info=-1;
+    printf("sent %f\n",info);
+    if(send(sock,&info,sizeof(info),0)<0){// Send Data to Server
+      perror("Sending Data");
+      exit(0);
+    }
+  }while(info != -1);
 
   close(sock);
   return 0;
