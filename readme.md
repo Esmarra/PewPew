@@ -37,3 +37,8 @@ Linux build only
 This project is licensed under the GNU General Public License
 
 ## Acknowledgments
+
+<p align="center">
+	<img src="https://i.imgur.com/G4cy8en.jpg">
+</p>
+
