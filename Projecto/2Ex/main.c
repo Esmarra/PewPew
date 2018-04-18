@@ -1,4 +1,23 @@
 
+/*=========================================
+Program Name :	client.c
+Base Language:	Mixed
+Created by   :	Esmarra
+Creation Date:	14/04/2018
+Rework date entries:
+
+Program Objectives:
+  * Open .asc and .bin
+  * Read 1 from .asc Write 1 to .bin
+  * Close .asc .bind
+  * Open .bin read to float array (one pass) -> mmap() ?
+  * Send floats to server (1 by one)
+  * End by sendind FLT_MAX (checksum)
+Observations:
+  * TxT to ASCII : http://www.unit-conversion.info/texttools/ascii/
+  * Float to Bin is overkill, since all nubers will be most likely ints
+Special Thanks:
+=========================================*/
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,124 +33,137 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#define RED "\x1B[31m"
-#define GREEN	"\x1B[32m"
-#define WHITE "\x1B[00m"
-
-void child1(int *);
+void child1(); // Execute ls
+void child2(int *); // Execute cat
+void parent(pid_t *,int *); // Execute sort
 
 int main(int argc, char **argv){
+  pid_t pid[2]; // Get current process pid
+  int pipe_fd[2]; // Pipe File Descriptor 0-Opened for Reading | 1-Opened for Writing
+  int status[2];
 
-  pid_t pid[2]; //get current process pid
-  // Pipe [1] send from Parent to Child
-  // Pipe [2] send from Child to Parent
-  int pipe_fd1[2]; // Pipe[1] File Descriptor 0-Opened for Reading | 1-Opened for Writing (Stores 2 Values)
-  int pipe_fd2[2]; // Pipe[2] File Descriptor
-
-  pid[0] = fork();
-  pid[1] = fork();
-  //printf("current pid=%jd\n",(intmax_t) pid[0]);
-  // ==== Error Check ==== //
-  if (pipe(pipe_fd1) == -1){
-    perror("\n Pipe[1] Down");
-  }
-  if (pipe(pipe_fd2) == -1){
-    perror("\n Pipe[2] Down");
+  printf("current pid=%jd\n",(intmax_t) pid[0]);
+  if(pipe(pipe_fd) == -1){ // Start Pipe cat-sort
+    perror("\nError|Pipe Down");
+    exit(EXIT_FAILURE);
   }
 
-  if (pid[0] == -1){
-    perror("\n Fork[0]");
+  if((pid[0]=fork()) == 0){
+    //printf("\n Child 1");
+    child1();
   }
-  if (pid[1] == -1){
-    perror("\n Fork[1]");
-  }
-  // ====             ==== //
-
-  if (pid[0] == 0){
-    printf("This is Child[1]\n");
-    child1(pipe_fd1); // cat
-    /*
-    //==== TESTING ====//
-    int varc=0;
-    while (1) {
-      printf("%sChild_count=%d\n",RED,varc);
-      varc++;
-      sleep(1);
-    }
-    //==== XXXXXX ====//
-    */
+  else if(pid[0] == -1){
+    perror("\nError|Fork[0]");
+    exit(EXIT_FAILURE);
   }
   else{
-    if(pid[1]==0){
-      child2(pipe_fd); // sort
+    if(((pid[1]=fork()) == 0)&&(waitpid(pid[1],&status[0],0))){ // forks and wait for child 1 to end
+      //printf("\n Child 2");
+      child2(pipe_fd);
     }
-    //fechar pipe?????
+    else if(pid[1] == -1){
+      perror("\nError|Fork[1]");
+      exit(EXIT_FAILURE);
+    }
+    else{
+      //printf("\n Parent");
+      parent(pid,pipe_fd);
+      exit(EXIT_SUCCESS);
+    }
   }
+  exit(EXIT_SUCCESS);
+}
 
-  else{
-    printf("This is Parent\n");
-    parent(pipe_fd1);
-    /*
-    //==== TESTING ====//
-    int varp=0;
-    while (1) {
-      printf("%sParent_count=%d\n",GREEN,varp);
-      //system("ls"); // Uses Command but Process Continues \CANT USE|
-      //execlp("ls", "ls", NULL); // Uses Command KILL's Process
-      varp++;
-      sleep(5);
-    }
-    //==== XXXXXX ====//
-    */
-    //close(pipe_fd1[0]);// Close reading end of first pipe
-    //WRITE????
+void child1(){ // ls
+  int file_fd;
+  //==== Changing ls output ====//
+  if( (file_fd = open("output.txt",O_WRONLY|O_CREAT|O_TRUNC,0666)) == -1){
+    perror("\nError|Child1 Open File");
+    exit(EXIT_FAILURE);
+  }
+  if(dup2(file_fd,1) == -1){
+    perror("\nError|Child1 dup2");
+    exit(EXIT_FAILURE);
+  }
+  if(close(file_fd) == -1){// Close File descriptor do ficheiro
+    perror("\nError|Child1 Close File");
+    exit(EXIT_FAILURE);
+  }
+  //==== Executar Comando ====//
+  if(execlp("ls","ls","-1",NULL) == -1){ // Fazer ls
+    perror("\nError|Child1 execlp ls");
+    exit(EXIT_FAILURE);
   }
 }
 
-void parent(int *pipe_fd){ // ls pipe
-  if (close(pipe_fd[0]) == -1){ // Close Pipe Read
-		perror("parent-close Leitura");
-	}
-  if (dup2(pipe_fd[1], STDOUT_FILENO) == -1){ // Copy of the file descriptor
-		perror("parent-dup2");
-	}
+void child2(int *pipe_fd){ // cat
+  int file_fd;
+  //==== Changing cat input ====//
+  if((file_fd = open("output.txt", O_RDONLY)) == -1){
+    perror("\nError|Child2 Open File");
+    exit(EXIT_FAILURE);
+  }
+  if(dup2(file_fd,0) == -1){
+    perror("\nError|Child2 dup2");
+    exit(EXIT_FAILURE);
+  }
+  if(close(file_fd) == -1){// Close File descriptor do ficheiro
+    perror("\nError|Child2 Close File");
+    exit(EXIT_FAILURE);
+  }
+
+  //==== Changing cat output ====//
+  if(close(pipe_fd[0]) == -1){ // Close Pipe Read
+    perror("\nError|Child2 Close Pipe Read");
+    exit(EXIT_FAILURE);
+  }
+  if(dup2(pipe_fd[1],1) == -1){
+    perror("\nError|Child2 dup2");
+    exit(EXIT_FAILURE);
+  }
+  if(close(pipe_fd[1]) == -1){
+    perror("\nError|Child2 Close Pipe Write");
+    exit(EXIT_FAILURE);
+  }
+
+  //==== Executar Comando ====//
+  if(execlp("cat","cat","-","/etc/passwd",NULL) == -1){ // Faz cat
+    perror("\nError|Child2 execlp cat");
+    exit(EXIT_FAILURE);
+  }
+}
+
+void parent(pid_t *pid,int *pipe_fd){ // sort
+  int endp; // Process end
+  int state[2]; // Childs state
+
+  int i;
+  for(i=0;i<sizeof(pid)/sizeof(pid_t);i++){
+    while( (endp=waitpid(pid[i],&state[i],0)) != pid[i]){ // Loops until childs complete
+      if(endp == -1){
+        perror("\nError|Parent Wait");
+        exit(EXIT_FAILURE);
+      }
+    }
+  }
+
+  //==== Change sort input ====//
   if (close(pipe_fd[1]) == -1){ // Close Pipe Write
-    perror("parent-close Escrita");
+		perror("\nError|Parent Close Pipe Write");
+    exit(EXIT_FAILURE);
+	}
+  if (dup2(pipe_fd[0], 0) == -1){
+		perror("\nError|Parent dup2");
+    exit(EXIT_FAILURE);
+	}
+  if (close(pipe_fd[0]) == -1){ // Close Pipe Read
+    perror("\nError|Parent Close Pipe Read");
+    exit(EXIT_FAILURE);
   }
-  // Fazer ls
-  if (execlp("ls","ls","-1",NULL) == -1){
-    perror("parent-execlp ls");
-  }
-}
 
-void child1(int *pipe_fd){ // cat pipe
-  if (close(pipe_fd[PIPE_INPUT]) == -1){// Close Pipe Read
-    perror("child1-close Leitura");
-  }
-  if (dup2(pipe_fd[PIPE_OUTPUT], STDOUT_FILENO) == -1){ // Copy of the file descriptor
-    perror("child1->dup2");
-  }
-  if (close(pipe_fd[PIPE_OUTPUT]) == -1){// Close Pipe Write
-    perror("child1-close Escrita");
-  }
-  // Fazer cat
-  if (execlp("cat","cat","/etc/passwd",NULL) == -1){ // <-- INCOMPLETO
-    perror("child1-execlp-cat");
-  }
-}
-
-void child2(int *pipe_fd){ // sort pipe
-  if (close(pipe_fd[PIPE_INPUT]) == -1){// Close Pipe Read
-    perror("child2-close Leitura");
-  }
-  if (dup2(pipe_fd[PIPE_OUTPUT], STDOUT_FILENO) == -1){ // Copy of the file descriptor
-    perror("child2->dup2");
-  }
-  if (close(pipe_fd[PIPE_OUTPUT]) == -1){// Close Pipe Write
-    perror("child2-close Escrita");
-  }
-// Fazer Sort
+  //==== Executar Comando ====//
   if (execlp("sort","sort","-r",NULL) == -1){
-    perror("child2-execlp-sort");
+    perror("\nError|Parent execlp sort");
+    exit(EXIT_FAILURE);
   }
 }
