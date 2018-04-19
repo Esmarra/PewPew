@@ -15,6 +15,7 @@ Program Objectives:
 Observations:
   * TxT to ASCII : http://www.unit-conversion.info/texttools/ascii/
   * Float to Bin is overkill, since all nubers will be most likely ints
+  * Bin to int https://www.programiz.com/c-programming/examples/binary-decimal-convert
 Special Thanks:
 =========================================*/
 #define _GNU_SOURCE
@@ -22,23 +23,26 @@ Special Thanks:
 #include <stdlib.h>
 #include <string.h>
 #include <math.h> // Conv bin
+//==== DEFAULT SOCKETS ====//
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+//====  MMAP ====//
+#include <sys/mman.h> // MAP_PRIVATE
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdint.h> //unit64 <-- remove?
 
 #define MAX_CAR 30 // File Max Characters per Line
 #define FLT_MAX 20 // Max lines(aka numbers) is .ASC FILE
-#define MANTISSA 23 // Bits Res in conv to bin
+#define MANTISSA 50 // Bits Res in conv to bin
 
 // Conv to Binary
 void fp2bin_i(double fp_int, char* binString);
 void fp2bin_f(double fp_frac, char* binString);
 void fp2bin(double fp, char* binString);
 char bin[MANTISSA];
-
-//Open with MMAP
-#include <sys/mman.h> // MAP_PRIVATE
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <stdint.h> //unit64 <-- remove?
 
 struct Data{
   float number[MAX_CAR]; // Stores in Float Array
@@ -49,6 +53,9 @@ struct Data{
 char aux[2];
 
 int main(){
+  int sock;
+  struct sockaddr_un server;
+
   struct Data data[FLT_MAX]; //Start data[INDEX] struct #### DELETE ####
   //struct Data bin_data[FLT_MAX]; // #### REPLACE ####
   int line=1; //Number of Lines in file AKA FLT_MAX
@@ -57,7 +64,7 @@ int main(){
   FILE *ficheiro2;
   ficheiro1 = fopen("input.asc","rt"); // Inicializa ficheiro de leitura
   ficheiro2 = fopen("input.bin","w");
-  char temp[100]; //mmap issue \!\
+  char temp[100]; //mmap issue \!
   char tee[MAX_CAR]={0};
   while (fgets(temp,MAX_CAR,ficheiro1) != NULL){ // Le ficheiro linha a linha
     //printf("\nRaw: %s",temp); // |DEBUG| read Raw value from file
@@ -146,6 +153,46 @@ int main(){
   }
   */
 
+  //==== Start UNIX Connection ====//
+  sock= socket(AF_UNIX, SOCK_STREAM, 0);
+  if (sock < 0) perror("Creating Socket");
+
+  server.sun_family = AF_UNIX; // Address
+  strncpy(server.sun_path, "/tmp/socket", sizeof(server.sun_path)-1);
+
+  if(connect(sock, (struct sockaddr *) &server, SUN_LEN(&server)) < 0){ // Connect to Server
+      perror("Connecting to Server");
+      exit(0);
+  }
+
+  float info;
+  do{
+    for(i=0;i<data[line].data_size;i++){
+      info=data[line].number[i+1];
+      printf("Sent%f\n",info); // DEBUG
+      if(send(sock,&info,sizeof(info),0)<0){// Send Data to Server
+        perror("Sending Data");
+        exit(0);
+      }
+    }
+
+    info=-2; // Cheat tells server that FLT_MAX is next
+    printf("FLT=%f\n",info); // DEBUG
+    if(send(sock,&info,sizeof(info),0)<0){// Send Data to Server
+      perror("Sending Data");
+      exit(0);
+    }
+
+    info=-1; // Send terminator
+    printf("sent %f\n",info);
+    if(send(sock,&info,sizeof(info),0)<0){// Send Data to Server
+      perror("Sending Data");
+      exit(0);
+    }
+
+  }while(info != -1);
+  close(sock);
+  exit(0);
 }
 
 void fp2bin_i(double fp_int, char* binString){
@@ -185,8 +232,8 @@ void fp2bin(double fp, char* binString){
  if (fp_int != 0)
    fp2bin_i(fp_int,binString);
  else
-   //strcpy(binString,"0");
- //strcat(binString,"."); // Radix point
+   strcpy(binString,"0");
+ strcat(binString,"."); // Radix point
  /* Convert fractional part, if any */
  if (fp_frac != 0)
    fp2bin_f(fp_frac,binString+strlen(binString)); //Append

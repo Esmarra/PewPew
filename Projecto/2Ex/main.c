@@ -1,21 +1,16 @@
 
 /*=========================================
-Program Name :	client.c
+Program Name :	main.c
 Base Language:	Mixed
 Created by   :	Esmarra
-Creation Date:	14/04/2018
+Creation Date:	11/04/2018
 Rework date entries:
-
+  * 18/04/2018
 Program Objectives:
-  * Open .asc and .bin
-  * Read 1 from .asc Write 1 to .bin
-  * Close .asc .bind
-  * Open .bin read to float array (one pass) -> mmap() ?
-  * Send floats to server (1 by one)
-  * End by sendind FLT_MAX (checksum)
+  * do ls -1 and send result to output.txt
+  * do cat - /etc/passwd with output.txt as input
+  * do sort -r with input from cat
 Observations:
-  * TxT to ASCII : http://www.unit-conversion.info/texttools/ascii/
-  * Float to Bin is overkill, since all nubers will be most likely ints
 Special Thanks:
 =========================================*/
 #define _GNU_SOURCE
@@ -42,7 +37,6 @@ int main(int argc, char **argv){
   int pipe_fd[2]; // Pipe File Descriptor 0-Opened for Reading | 1-Opened for Writing
   int status[2];
 
-  printf("current pid=%jd\n",(intmax_t) pid[0]);
   if(pipe(pipe_fd) == -1){ // Start Pipe cat-sort
     perror("\nError|Pipe Down");
     exit(EXIT_FAILURE);
@@ -135,11 +129,11 @@ void child2(int *pipe_fd){ // cat
 
 void parent(pid_t *pid,int *pipe_fd){ // sort
   int endp; // Process end
-  int state[2]; // Childs state
+  int status[2]; // Childs state
 
   int i;
   for(i=0;i<sizeof(pid)/sizeof(pid_t);i++){
-    while( (endp=waitpid(pid[i],&state[i],0)) != pid[i]){ // Loops until childs complete
+    while( (endp=waitpid(pid[i],&status[i],0)) != pid[i]){ // Loops until childs complete
       if(endp == -1){
         perror("\nError|Parent Wait");
         exit(EXIT_FAILURE);

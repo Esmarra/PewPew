@@ -31,7 +31,7 @@ Special Thanks:
 //========================//
 #define FLT_MAX 20 // Max Lines in ASC File
 #define MAX_CAR 30 // File Max Characters per Line
-#define MANTISSA 23
+#define MANTISSA 50
 
 char read_file_name[]="sauce/input.asc";   // Read asc file located at /sauce/
 char write_file_name[]="sauce/input.bin";   // Write bin file located at /sauce/
@@ -132,8 +132,6 @@ int main(){ // client
   return 0;
 }
 
-
-
 void fp2bin_i(double fp_int, char* binString){
  int bitCount = 0;
  int i;
@@ -171,8 +169,8 @@ void fp2bin(double fp, char* binString){
  if (fp_int != 0)
    fp2bin_i(fp_int,binString);
  else
-   //strcpy(binString,"0");
- //strcat(binString,"."); // Radix point
+   strcpy(binString,"0");
+ strcat(binString,"."); // Radix point
  /* Convert fractional part, if any */
  if (fp_frac != 0)
    fp2bin_f(fp_frac,binString+strlen(binString)); //Append
