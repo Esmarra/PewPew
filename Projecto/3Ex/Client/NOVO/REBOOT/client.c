@@ -67,6 +67,7 @@ int main(int argc, char **argv){
   while (fscanf(ficheiro1,"%f",&temp) != EOF){ // Le ficheiro linha a linha
     printf("Raw: %f\n",temp); // |DEBUG| read Raw value from file
     fp2bin(temp,bin); // Conv float to bin
+    printf("Bin: %s\n",bin);
     //fwrite(&bin, sizeof(bin), 1, ficheiro2); // ENCODING ERROR
     fprintf(ficheiro2,"%s\n",bin);
     //fprintf(ficheiro2,"\n");
@@ -77,7 +78,7 @@ int main(int argc, char **argv){
   fclose(ficheiro2);// Close .bin file
   printf(">Input File has %d lines\n",line );
 
-  //==== Open .bin ====//
+  //==== Open .bin ====//   ########## BUGGADO ##########
   char *memblock;
   int fd;
   size_t size;
@@ -91,8 +92,41 @@ int main(int argc, char **argv){
     perror("\nError|mmap");
     exit(EXIT_FAILURE);
   }
-  read(fd, memblock, size);
+
+  char teste[100];
+  char aux[1];
+  char outra[30];
+  float value[100];
+  int i;
+  for(i = 0; i < size; i++){ // Abrir x mem blocks (MAX?)
+    if(memblock[i]=='\n'){ //end strcat
+      //value=atof(teste);
+      sprintf(outra, "%.20f", atof(teste));
+      printf("Bin Flt: %s \n",outra);
+      teste[0]='\0'; //Reset temp
+      //printf("endl\n" );
+      //flt++;
+    }
+    else{
+      if(memblock[i]=='\0'){
+        printf("dead\n" );
+        break;
+      }
+      sprintf(aux,"%c",memblock[i]); // copy memblock to aux
+      //printf("aux:%s\n",aux);
+      strcat(teste,aux); // clip aux to temp
+    }
+   }
+
+
+  float nuk;
+  nuk=read(fd, memblock, size);
+  printf("Nuk: %f\n",nuk);
   close(fd);
+  //==== XXXXXXXX ====// ########## BUGGADO ##########
+
+
+
   //==== Start UNIX Connection ====//
   sock= socket(AF_UNIX, SOCK_STREAM, 0);
   if (sock < 0) perror("Creating Socket");
@@ -140,44 +174,37 @@ void fp2bin_i(double fp_int, char* binString){
  int bitCount = 0;
  int i;
  char binString_temp[MANTISSA];
-
  do{
     binString_temp[bitCount++] = '0' + (int)fmod(fp_int,2);
     fp_int = floor(fp_int/2);
    } while (fp_int > 0);
-
- /* Reverse the binary string */
- for (i=0; i<bitCount; i++)
+ for (i=0; i<bitCount; i++) // Inverter bin
    binString[i] = binString_temp[bitCount-i-1];
 
- binString[bitCount] = 0; //Null terminator
+ binString[bitCount] = 0; // null
 }
 
 void fp2bin_f(double fp_frac, char* binString){
  int bitCount = 0;
  double fp_int;
-
  while (fp_frac > 0){
     fp_frac*=2;
     fp_frac = modf(fp_frac,&fp_int);
     binString[bitCount++] = '0' + (int)fp_int;
    }
-  binString[bitCount] = 0; //Null terminator
+  binString[bitCount] = 0; // null
 }
 
 void fp2bin(double fp, char* binString){
  double fp_int, fp_frac;
- /* Separate integer and fractional parts */
- fp_frac = modf(fp,&fp_int);
- /* Convert integer part, if any */
- if (fp_int != 0)
+ fp_frac = modf(fp,&fp_int); // Separar int das frac
+ if (fp_int != 0) // Convert int
    fp2bin_i(fp_int,binString);
  else
    strcpy(binString,"0");
- strcat(binString,"."); // Radix point
- /* Convert fractional part, if any */
- if (fp_frac != 0)
-   fp2bin_f(fp_frac,binString+strlen(binString)); //Append
+ strcat(binString,"."); // Ponto
+ if (fp_frac != 0)  // Convert fracção
+   fp2bin_f(fp_frac,binString+strlen(binString)); // Append
  else
    strcpy(binString+strlen(binString),"0");
 }
