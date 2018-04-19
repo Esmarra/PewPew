@@ -32,7 +32,7 @@ char bin[MANTISSA];
 float bin2fp(char* digits);
 
 int main(){
-  float buf; // Receive over socket
+  float buf,flt_max; // Receive over socket
   int sock_s,sock_c;
   struct sockaddr_un server;
   memset(&server, 0, sizeof(server));
@@ -80,29 +80,23 @@ int main(){
       exit(0);
     }
 
-    if(buf!=-1){
-      //conv data from bin to float to ASCII
-      // add 0 se 9<data<100
-      // add 00 se 0<data<10
-      if(buf==-2){
-        if(recv(sock_c, &buf, sizeof(buf), 0) < 0){
+    if(buf!=-1){ // Data is valid
+      if(buf==-2){ // -2 <-- FLT_MAX is next
+        if(recv(sock_c, &buf, sizeof(buf), 0) < 0){ //get
           perror("Receiving Data From Client");
           exit(0);
         }
-        printf("FL=%f\n",buf);
-        exit(0);
+        flt_max=buf;
+        printf("FLT_MAX=%d\n",flt_max); //Disp
+        exit(0);// FINISH
       }
 
-      //fprintf(ficheiro1,"%f ",buf);
-      //sprintf(buff,20,buf);
-      printf("Rcv1: %f\n",buf );
-      printf("Rcv2: %.10f\n",buf );
-      snprintf(bin, sizeof bin, "%.10f", buf);
+      printf("Rcv: %.10f\n",buf );
+      snprintf(bin, sizeof bin, "%.10f", buf); // Copy float to bin
+      //write(1,&bin,sizeof bin);
       buf=bin2fp(bin); // Conv 2 flt
-      printf("Float: %f\n",buf);
-      fprintf(ficheiro1,"%f\n",buf);
-      //if(buf!='\0')
-      //write(fd,&buf,sizeof(buf));
+      //printf("Float: %f\n",buf);
+      fprintf(ficheiro1,"%f\n",buf); //write to file
     }
 
   }while(buf != -1);
