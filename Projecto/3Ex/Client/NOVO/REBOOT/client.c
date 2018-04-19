@@ -134,7 +134,7 @@ int main(int argc, char **argv){
       exit(0);
   }
 
-  float info; // podemos eleminar
+  float info; // podemos eleminar info=dbin[i];
   do{
     int i;
     for(i=0;i<flt;i++){
@@ -147,6 +147,11 @@ int main(int argc, char **argv){
     }
 
     info=-2; // Cheat tells server that FLT_MAX is next
+    if(send(sock,&info,sizeof(info),0)<0){// Send Data to Server
+      perror("Sending Data");
+      exit(0);
+    }
+    info=flt; // Send FLT_MAX
     printf("FLT=%f\n",info); // DEBUG
     if(send(sock,&info,sizeof(info),0)<0){// Send Data to Server
       perror("Sending Data");
