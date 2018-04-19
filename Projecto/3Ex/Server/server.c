@@ -17,11 +17,19 @@ Special Thanks:
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <math.h>
 //==== DEFAULT SOCKETS ====//
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+//==== FILE I/O ====//
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdint.h> //unit64 <-- remove?
+#define MANTISSA 50 // Bits Res in conv to bin
 
+char bin[MANTISSA];
+float bin2fp(char* digits);
 
 int main(){
   float buf; // Receive over socket
@@ -41,7 +49,9 @@ int main(){
   //if(bind(sock_s, (struct sockaddr *) &server, SUN_LEN(&server)) < 0){
   FILE *ficheiro1;
   ficheiro1 = fopen("output.asc","w");
-
+  //int fd;
+  //fd = open("output.asc", O_WRONLY|O_CREAT|O_TRUNC);
+  //const void *buff;
 
   unlink("/tmp/socket"); // Unlink socket
   if(bind(sock_s, (struct sockaddr*)&server, sizeof(server))<0){
@@ -82,8 +92,17 @@ int main(){
         printf("FL=%f\n",buf);
         exit(0);
       }
-      fprintf(ficheiro1,"%f ",buf);
-      printf("Rcv: %f\n",buf );
+
+      //fprintf(ficheiro1,"%f ",buf);
+      //sprintf(buff,20,buf);
+      printf("Rcv1: %f\n",buf );
+      printf("Rcv2: %.10f\n",buf );
+      snprintf(bin, sizeof bin, "%.10f", buf);
+      buf=bin2fp(bin); // Conv 2 flt
+      printf("Float: %f\n",buf);
+      fprintf(ficheiro1,"%f\n",buf);
+      //if(buf!='\0')
+      //write(fd,&buf,sizeof(buf));
     }
 
   }while(buf != -1);
@@ -91,4 +110,42 @@ int main(){
   close(sock_s); // Close Server
 	close(sock_c); // Close Client
   unlink("/tmp/socket"); // Cleanup
+}
+
+float bin2fp(char* digits){
+    int befDec[MANTISSA], aftDec[MANTISSA];
+    int aftDecDigits, befDecDigits, storeIntegral=0, i, j=0, k=0;
+    float storeFractional=0, floatValue;
+    char up = 'd';
+		//printf("digits=%s\n",digits);
+    for(i=0; i<strlen(digits); i++){  // Separar int das frac
+        if(digits[i]=='.'){
+            up='u';
+        }
+        else if(up=='d'){
+            befDec[i] = (int)digits[i]-48;
+            k++;
+        }
+        else{
+            aftDec[j] = (int)digits[i]-48;
+            j++;
+        }
+    }
+    befDecDigits = k;
+    aftDecDigits = j;
+
+    j=0;
+    for(i = befDecDigits-1; i>=0; i--){
+        storeIntegral = storeIntegral + (befDec[i] *(int) pow(2,j));
+        j++;
+    }
+
+    j = -1;
+    for(i = 0; i<aftDecDigits; i++){
+        storeFractional = storeFractional + (aftDec[i]*pow(2,j));
+        j--;
+    }
+
+    floatValue = storeIntegral + storeFractional;
+		return(floatValue);
 }
