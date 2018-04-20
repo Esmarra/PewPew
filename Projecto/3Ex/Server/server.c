@@ -31,7 +31,7 @@ Special Thanks:
 char bin[MANTISSA];
 float bin2fp(char* digits);
 
-int main(){
+int main(int argc, char **argv){
   float buf,flt_max; // Receive over socket
   int sock_s,sock_c;
   struct sockaddr_un server;
@@ -87,12 +87,13 @@ int main(){
           exit(0);
         }
         flt_max=buf;
-        printf("FLT_MAX=%d\n",flt_max); //Disp
-        exit(0);// FINISH
+        printf("FLT_MAX=%1.0f\n",flt_max); //Disp
+        break;
+        //exit(0);// FINISH
       }
 
       printf("Rcv: %.10f\n",buf );
-      snprintf(bin, sizeof bin, "%.10f", buf); // Copy float to bin
+      snprintf(bin, sizeof bin, "%.10f", buf); // Copy float(buf) to char(bin)
       //write(1,&bin,sizeof bin);
       buf=bin2fp(bin); // Conv 2 flt
       //printf("Float: %f\n",buf);
@@ -104,6 +105,8 @@ int main(){
   close(sock_s); // Close Server
 	close(sock_c); // Close Client
   unlink("/tmp/socket"); // Cleanup
+  printf("THE END\n" );
+  exit(0);
 }
 
 float bin2fp(char* digits){

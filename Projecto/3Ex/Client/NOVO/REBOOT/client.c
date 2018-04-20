@@ -25,7 +25,6 @@ Special Thanks:
 #include <string.h>
 #include <math.h> // Conv bin
 //==== DEFAULT SOCKETS ====//
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 //====  MMAP ====//
@@ -36,7 +35,6 @@ Special Thanks:
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#define MAX_CAR 30 // File Max Characters per Line
 #define FLT_MAX 20 // Max lines(aka numbers) is .ASC FILE
 #define MANTISSA 50 // Bits Res in conv to bin
 
@@ -46,12 +44,12 @@ void fp2bin_f(double fp_frac, char* binString);
 void fp2bin(double fp, char* binString);
 char bin[MANTISSA];
 
-float dbin[FLT_MAX];
+float dbin[FLT_MAX]; // Array que da store aos floats
 
 int main(int argc, char **argv){
   int sock;
   struct sockaddr_un server;
-  int line=1; //Number of Lines in file AKA FLT_MAX
+  int line=1; //Number of Lines in file AKA FLT_MAX !REMOVE????!
 
   FILE *ficheiro1;
   FILE *ficheiro2;
