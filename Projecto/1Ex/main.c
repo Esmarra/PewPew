@@ -9,7 +9,7 @@
 void sigproc (int var );
 void sigqproc (int var );
 
-int main (){
+int main (int argc, char **argv){
   signal (SIGINT , sigproc );
   signal (SIGQUIT , sigqproc );
   while (1){ // Loop
