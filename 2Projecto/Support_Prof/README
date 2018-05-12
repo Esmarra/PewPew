@@ -1,0 +1,11 @@
+Files contents: 
+
+- Semaphores library: 
+    semlib.h 
+    semlib.c
+- Main program:
+    tpso1802.c
+- Script to remove IPCS: 
+    kill_ipcs.sh
+
+
